@@ -1,24 +1,57 @@
-export default class ConcurrenceLimiter<T> {
-  readonly pool: (Promise<void> | null)[];
-  readonly concurrency: number;
+class Queue<T> {
+  private data: Array<T>;
 
-  constructor(concurrency: number) {
-    this.concurrency = concurrency;
-    this.pool = Array(concurrency).fill(null);
+  constructor(_data?: Array<T>) {
+    this.data = _data ?? [];
   }
 
-  run(getPromise: () => Promise<T>): Promise<T> {
-    const inner = (resolve: (value: T | PromiseLike<T>) => void) => {
-      const index = this.pool.indexOf(null);
-      if (index === -1) {
-        Promise.race(this.pool).then(() => inner(resolve));
+  push(val: T) {
+    this.data.push(val);
+  }
+
+  shift(): T | undefined {
+    return this.data.shift();
+  }
+
+  isEmpty(): boolean {
+    return this.data.length === 0;
+  }
+}
+
+interface Task<T> {
+  resolve: (value: T | PromiseLike<T>) => void;
+  fn: () => Promise<T>;
+}
+
+export default class ConcurrenceLimiter<T> {
+  private concurrency: number;
+  private count = 0;
+  private queue = new Queue<Task<T>>();
+
+  constructor(_concurrency: number) {
+    this.concurrency = _concurrency;
+  }
+
+  add(fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve) => {
+      const task: Task<T> = { resolve, fn };
+      if (this.count < this.concurrency) {
+        this.count++;
+        this.run(task);
       } else {
-        this.pool[index] = getPromise().then((data) => {
-          this.pool[index] = null;
-          resolve(data);
-        });
+        this.queue.push(task);
       }
-    }
-    return new Promise(inner);
+    });
+  }
+
+  private run(task: Task<T>) {
+    task.fn().then((value) => {
+      task.resolve(value);
+      if (!this.queue.isEmpty()) {
+        this.run(this.queue.shift()!);
+      } else {
+        this.count--;
+      }
+    });
   }
 }

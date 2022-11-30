@@ -29,7 +29,7 @@ async function main() {
     } else {
       fs.exists(curPath).then((existed) => {
         if (!existed) {
-          limiter.run(
+          limiter.add(
             () => {
               console.log(`start download: ${curPath}`);
               return fetch(info.mediaDownloadUrl)
