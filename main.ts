@@ -26,7 +26,7 @@ async function main() {
     curPath = path.join(curPath, info.title);
     if (info.type === 'folder') {
       info.children.forEach(child => dfs(child, curPath));
-    } else if (path.extname(curPath) !== '.wav') {
+    } else {
       fs.exists(curPath).then((existed) => {
         if (!existed) {
           limiter.run(
