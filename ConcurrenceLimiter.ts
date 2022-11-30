@@ -19,7 +19,8 @@ class Queue<T> {
 }
 
 interface Task<T> {
-  resolve: (value: T | PromiseLike<T>) => void;
+  resolve: Parameters<ConstructorParameters<typeof Promise<T>>[0]>[0];
+  reject: Parameters<ConstructorParameters<typeof Promise<T>>[0]>[1];
   fn: () => Promise<T>;
 }
 
@@ -33,8 +34,8 @@ export default class ConcurrenceLimiter<T> {
   }
 
   add(fn: () => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve) => {
-      const task: Task<T> = { resolve, fn };
+    return new Promise<T>((resolve, reject) => {
+      const task: Task<T> = { resolve, reject, fn };
       if (this.count < this.concurrency) {
         this.count++;
         this.run(task);
@@ -45,13 +46,22 @@ export default class ConcurrenceLimiter<T> {
   }
 
   private run(task: Task<T>) {
-    task.fn().then((value) => {
-      task.resolve(value);
-      if (!this.queue.isEmpty()) {
-        this.run(this.queue.shift()!);
-      } else {
-        this.count--;
-      }
-    });
+    task.fn()
+      .then((value) => {
+        task.resolve(value);
+        this.pull();
+      })
+      .catch((error) => {
+        task.reject(error);
+        this.pull();
+      });
+  }
+
+  private pull() {
+    if (!this.queue.isEmpty()) {
+      this.run(this.queue.shift()!);
+    } else {
+      this.count--;
+    }
   }
 }
