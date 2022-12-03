@@ -8,7 +8,7 @@ async function main() {
   }
   const [name, password, rj] = Deno.args;
   const infos = await getInfos(name, password, rj);
-  infos.forEach(i => downloadByInfo(i));
+  infos.forEach(i => downloadByInfo(i, `./download/${rj}`));
 }
 
 main();

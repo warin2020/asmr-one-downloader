@@ -19,7 +19,7 @@ const limiter = new ConcurrenceLimiter<void>(4);
 
 const ignores = readLines('./.extignore')
 
-export default function downloadByInfo(info: Info, curPath = 'download') {
+export default function downloadByInfo(info: Info, curPath = '.') {
   curPath = path.join(curPath, info.title);
   if (info.type === 'folder') {
     info.children.forEach(child => downloadByInfo(child, curPath));
