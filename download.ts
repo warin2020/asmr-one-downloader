@@ -8,13 +8,22 @@ async function writeFileByPath(filePath: string, data: Uint8Array) {
   await Deno.writeFile(filePath, data);
 }
 
+function readLines(filePath: string): string[] {
+  return new TextDecoder()
+    .decode(Deno.readFileSync(filePath))
+    .split('\n')
+    .filter(l => l !== '');
+}
+
 const limiter = new ConcurrenceLimiter<void>(4);
+
+const ignores = readLines('./.extignore')
 
 export default function downloadByInfo(info: Info, curPath = 'download') {
   curPath = path.join(curPath, info.title);
   if (info.type === 'folder') {
     info.children.forEach(child => downloadByInfo(child, curPath));
-  } else {
+  } else if (!ignores.includes(path.extname(curPath))) {
     fs.exists(curPath).then((existed) => {
       if (!existed) {
         limiter.add(
