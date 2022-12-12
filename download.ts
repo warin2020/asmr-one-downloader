@@ -17,13 +17,13 @@ function readLines(filePath: string): string[] {
 
 const limiter = new ConcurrenceLimiter<void>(4);
 
-const ignores = readLines('./.extignore')
+const ignores = readLines('./.pathignore');
 
 export default function downloadByInfo(info: Info, curPath = '.') {
   curPath = path.join(curPath, info.title);
   if (info.type === 'folder') {
     info.children.forEach(child => downloadByInfo(child, curPath));
-  } else if (!ignores.includes(path.extname(curPath))) {
+  } else if (!ignores.some(ignore => curPath.includes(ignore))) {
     fs.exists(curPath).then((existed) => {
       if (!existed) {
         limiter.add(
